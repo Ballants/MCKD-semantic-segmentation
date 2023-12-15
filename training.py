@@ -3,7 +3,7 @@ import torch
 from transformers import OneFormerProcessor, OneFormerForUniversalSegmentation, AutoModelForUniversalSegmentation, SwinForImageClassification, AutoImageProcessor
 from encoder_decoder import SwinDeepLabV3Plus
 
-def train(train_loader, stud_id):
+def train(stud_id):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     # print(torch.cuda.is_available())
     print('Device: ', device)
