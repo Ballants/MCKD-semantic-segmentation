@@ -17,7 +17,7 @@ def visualize_segmentation(segmentation_tensor):
 
     # Map the class indices to RGB colors using NumPy vectorized operations
     segmented_image = np.zeros((segmentation_tensor.shape[0], segmentation_tensor.shape[1], 4), dtype=np.float32)
-    class_indices = segmentation_tensor.long().numpy()
+    class_indices = segmentation_tensor.long().cpu().numpy()
 
     mask = np.isin(class_indices, list(coco_color_map.keys()))
     segmented_image[mask] = [coco_color_map[class_index] for class_index in class_indices[mask]]

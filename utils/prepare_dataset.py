@@ -5,8 +5,8 @@ import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as transforms
-
 from sklearn.model_selection import train_test_split
+
 
 def plot_random_samples(data_loader):
     # Create a figure with a 3x3 grid of subplots
@@ -37,17 +37,17 @@ def plot_random_samples(data_loader):
 
 
 def prepare_data():
-    data_transform = transforms.Compose([transforms.Resize(600),  # resize shortest side
-                                         transforms.CenterCrop(600),  # Todo modify accordingly to backbone input size
+    data_transform = transforms.Compose([transforms.Resize(224),  # resize shortest side
+                                         transforms.CenterCrop(224),
                                          transforms.ToTensor()])
 
     # transforms (callable, optional) – A function/transform that takes input sample and its target as entry and returns a transformed version.
     # TODO fun fact: nella versione "test2017" (41k imgs, 6GB) non ci sono le annotazioni
-    coco_dataset = torchvision.datasets.CocoDetection(root="./coco_dataset/test2017",
-                                                      annFile="./coco_dataset/annotations/image_info_test2017.json",
+    coco_dataset = torchvision.datasets.CocoDetection(root="../coco_dataset/test2017",
+                                                      annFile="../coco_dataset/annotations/image_info_test2017.json",
                                                       transform=data_transform)  # Todo check if "transforms" works on target data (check resulting images)
 
-    print('\nLen dataset: ', len(coco_dataset)) # 40670
+    print('\nLen dataset: ', len(coco_dataset))  # 40670
     train_ds, val_test_ds = train_test_split(coco_dataset, train_size=0.7, shuffle=True, random_state=42)
     print('Len Training dataset: ', len(train_ds))  # 28469
     val_ds, test_ds = train_test_split(val_test_ds, test_size=1 / 3, shuffle=True, random_state=42)
@@ -57,6 +57,12 @@ def prepare_data():
     train_ds_1, train_ds_2 = train_test_split(train_ds, train_size=0.5, shuffle=True, random_state=42)
     val_ds_1, val_ds_2 = train_test_split(val_ds, train_size=0.5, shuffle=True, random_state=42)
     test_ds_1, test_ds_2 = train_test_split(test_ds, train_size=0.5, shuffle=True, random_state=42)
+    print('Len Training dataset_1: ', len(train_ds))  # 28469
+    print('Len Training dataset_2: ', len(train_ds))  # 28469
+    print('Len Validation dataset_1: ', len(val_ds))  # 8134
+    print('Len Validation dataset_2: ', len(val_ds))  # 8134
+    print('Len Testing dataset_1: ', len(test_ds))    # 4067
+    print('Len Testing dataset_2: ', len(test_ds))    # 4067
 
     train_dl_1 = torch.utils.data.DataLoader(train_ds_1, batch_size=8, shuffle=True, num_workers=1)
     train_dl_2 = torch.utils.data.DataLoader(train_ds_2, batch_size=8, shuffle=True, num_workers=1)
