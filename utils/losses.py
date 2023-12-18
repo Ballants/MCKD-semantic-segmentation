@@ -8,9 +8,8 @@ from torch.nn.modules.loss import _Loss
 __all__ = ["DiceLoss"]
 
 
-def soft_dice_score(
-        output: torch.Tensor, target: torch.Tensor, smooth: float = 0.0, eps: float = 1e-7, dims=None
-) -> torch.Tensor:
+def soft_dice_score(output: torch.Tensor, target: torch.Tensor, smooth: float = 0.0,
+                    eps: float = 1e-7, dims=None) -> torch.Tensor:
     """
 
     :param output:
@@ -72,7 +71,7 @@ class DiceLoss(_Loss):
 
         if self.from_logits:
             # Apply activations to get [0..1] class probabilities
-            # Log-Exp gives more numerically stable result and does not cause vanishing gradient on extreme values 0 and 1
+            # Log-Exp gives more stable result and does not cause vanishing gradient on extreme values 0 and 1
             y_pred = y_pred.log_softmax(dim=1).exp()
 
         bs = y_true.size(0)

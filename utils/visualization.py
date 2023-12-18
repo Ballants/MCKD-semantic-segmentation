@@ -31,12 +31,11 @@ def visualize_segmentation(segmentation_tensor):
     plt.axis('off')
     plt.title('Segmentation Map')
 
+    # Adjust layout to prevent overlapping
+    plt.tight_layout()
+
     handles = [mpatches.Patch(color=coco_color_map[label_id], label=id2label[label_id]) for label_id in labels_ids]
 
     # Create legend with class labels
     plt.legend(handles=handles, labels=legend_labels, loc='upper left', bbox_to_anchor=(1, 1))
-
-    # Adjust layout to prevent overlapping
-    plt.tight_layout()
-
     plt.show()
