@@ -8,6 +8,7 @@ from torch.nn import functional as F
 from transformers import OneFormerProcessor, AutoModelForUniversalSegmentation
 
 from model.encoder_decoder import SwinDeepLabV3Plus
+from utils.losses import DiceLoss
 from utils.visualization import visualize_segmentation
 
 
@@ -57,8 +58,12 @@ def train(stud_id, path_to_save_model=None):
     learning_rate = 1e-03
     epochs = 100
     T = 10  # Todo
-    soft_target_loss_weight = 0.75  # TODO cambiato
-    ce_loss_weight = 1 - soft_target_loss_weight
+
+    # Weights sum up to 1
+    # TODO paper 2015 dice che deve essere più alto al resto... online è sempre più basso del resto (tipo regularization)
+    kl_loss_weight = 0.2
+    ce_loss_weight = 0.4
+    dice_loss_weight = 0.4
 
     # Todo capire se possono essere utili
     clip_grad = None
@@ -67,7 +72,8 @@ def train(stud_id, path_to_save_model=None):
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma) '''
 
     ce_loss = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(student.parameters(), lr=learning_rate) # todo use adam?
+    dice_loss = DiceLoss()
+    optimizer = optim.Adam(student.parameters(), lr=learning_rate)  # todo use adam?
 
     # Todo training loop
     teacher.eval()  # Teacher set to evaluation mode
@@ -113,14 +119,16 @@ def train(stud_id, path_to_save_model=None):
             soft_prob = soft_prob.permute(0, 2, 3, 1).reshape(-1, 133)
 
             # Calculate the soft targets loss. ["Distilling the knowledge in a neural network"]
-            # KL Div:
-            soft_targets_loss = F.kl_div(soft_prob, soft_targets, reduction='batchmean') * (T**2)
+            kl_div_res = F.kl_div(soft_prob, soft_targets, reduction='batchmean') * (T ** 2)
 
             # Calculate the true label loss
-            label_loss = ce_loss(student_logits, pseudo_labels)
+            ce_res = ce_loss(student_logits, pseudo_labels)
+
+            # Calculate the true label loss
+            dice_res = dice_loss(student_logits, pseudo_labels)
 
             # Weighted sum of the two losses
-            loss = soft_target_loss_weight * soft_targets_loss + ce_loss_weight * label_loss
+            loss = kl_loss_weight * kl_div_res + ce_loss_weight * ce_res + dice_loss_weight * dice_res
 
             '''print("####### epoch: ", epoch, " #######")
             print("KL Loss: ", soft_targets_loss)
@@ -164,12 +172,11 @@ def train(stud_id, path_to_save_model=None):
                 soft_targets = soft_targets.permute(0, 2, 3, 1).reshape(-1, 133)
                 soft_prob = soft_prob.permute(0, 2, 3, 1).reshape(-1, 133)
 
-                soft_targets_loss = F.kl_div(soft_prob, soft_targets, reduction='batchmean') * (T ** 2)
+                kl_div_res = F.kl_div(soft_prob, soft_targets, reduction='batchmean') * (T ** 2)
+                ce_res = ce_loss(student_logits, pseudo_labels)
+                dice_res = dice_loss(student_logits, pseudo_labels)
 
-                label_loss = ce_loss(student_logits, pseudo_labels)
-
-                # Weighted sum of the two losses
-                loss = soft_target_loss_weight * soft_targets_loss + ce_loss_weight * label_loss
+                loss = kl_loss_weight * kl_div_res + ce_loss_weight * ce_res + dice_loss_weight * dice_res
 
                 '''print("####### epoch: ", epoch, " #######")
                 print("KL Loss: ", soft_targets_loss)
@@ -185,7 +192,7 @@ def train(stud_id, path_to_save_model=None):
             scheduler.step()'''
 
         # Save and plot
-        if (epoch + 1) % 1 == 0: # todo %10
+        if (epoch + 1) % 1 == 0:  # todo %10
 
             if path_to_save_model is not None:
                 checkpoint_path = path_to_save_model + f'student_ckpt_epoch_{epoch + 1}.pth'
