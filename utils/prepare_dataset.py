@@ -8,6 +8,8 @@ import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
 
 BATCH_SIZE = 8
+PERC_DATA = 0.1  # percentage of dataset we are using
+
 
 def plot_random_samples(data_loader):
     # Create a figure with a 3x3 grid of subplots
@@ -49,9 +51,8 @@ def prepare_data():
                                                       transform=data_transform)  # Todo check if "transforms" works on target data (check resulting images)
 
     print('\nLen dataset: ', len(coco_dataset))  # 40670
-    perc_data = 0.1  # percentage of dataset we are using
 
-    ds, _ = train_test_split(coco_dataset, train_size=perc_data, shuffle=True, random_state=42)
+    ds, _ = train_test_split(coco_dataset, train_size=PERC_DATA, shuffle=True, random_state=42)
 
     train_ds, val_test_ds = train_test_split(ds, train_size=0.7, shuffle=True, random_state=42)
     print('Len Training dataset: ', len(train_ds))  # 28469     #
@@ -66,8 +67,8 @@ def prepare_data():
     print('Len Training dataset_2: ', len(train_ds_2))  # 14235     #
     print('Len Validation dataset_1: ', len(val_ds_1))  # 4067     #
     print('Len Validation dataset_2: ', len(val_ds_2))  # 4067     #
-    print('Len Testing dataset_1: ', len(test_ds_1))    # 2033     #
-    print('Len Testing dataset_2: ', len(test_ds_2))    # 2034     #
+    print('Len Testing dataset_1: ', len(test_ds_1))  # 2033     #
+    print('Len Testing dataset_2: ', len(test_ds_2))  # 2034     #
 
     train_dl_1 = torch.utils.data.DataLoader(train_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
     train_dl_2 = torch.utils.data.DataLoader(train_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
