@@ -7,6 +7,7 @@ import torchvision
 import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
 
+BATCH_SIZE = 8
 
 def plot_random_samples(data_loader):
     # Create a figure with a 3x3 grid of subplots
@@ -68,12 +69,12 @@ def prepare_data():
     print('Len Testing dataset_1: ', len(test_ds_1))    # 2033     #
     print('Len Testing dataset_2: ', len(test_ds_2))    # 2034     #
 
-    train_dl_1 = torch.utils.data.DataLoader(train_ds_1, batch_size=8, shuffle=True, num_workers=1)
-    train_dl_2 = torch.utils.data.DataLoader(train_ds_2, batch_size=8, shuffle=True, num_workers=1)
-    val_dl_1 = torch.utils.data.DataLoader(val_ds_1, batch_size=8, shuffle=True, num_workers=1)
-    val_dl_2 = torch.utils.data.DataLoader(val_ds_2, batch_size=8, shuffle=True, num_workers=1)
-    test_dl_1 = torch.utils.data.DataLoader(test_ds_1, batch_size=8, shuffle=True, num_workers=1)
-    test_dl_2 = torch.utils.data.DataLoader(test_ds_2, batch_size=8, shuffle=True, num_workers=1)
+    train_dl_1 = torch.utils.data.DataLoader(train_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
+    train_dl_2 = torch.utils.data.DataLoader(train_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
+    val_dl_1 = torch.utils.data.DataLoader(val_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
+    val_dl_2 = torch.utils.data.DataLoader(val_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
+    test_dl_1 = torch.utils.data.DataLoader(test_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
+    test_dl_2 = torch.utils.data.DataLoader(test_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
 
     # Plot few samples
     plot_random_samples(train_dl_1)

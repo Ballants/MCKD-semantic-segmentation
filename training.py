@@ -1,8 +1,10 @@
+import time
+
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 import torch.optim as optim
+from torch.nn import functional as F
 from transformers import OneFormerProcessor, AutoModelForUniversalSegmentation
 
 from model.encoder_decoder import SwinDeepLabV3Plus
@@ -213,5 +215,8 @@ def train(stud_id, path_to_save_model=None):
 
 if __name__ == '__main__':
     print("### Starting training... ###")
+    t0 = time.time()
     train(stud_id=1)
+    t1 = time.time()
+    print("training/validation time: {0:.2f}s".format(t1 - t0))
     print("### DataLoader ready ###")
