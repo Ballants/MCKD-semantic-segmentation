@@ -48,21 +48,25 @@ def prepare_data():
                                                       transform=data_transform)  # Todo check if "transforms" works on target data (check resulting images)
 
     print('\nLen dataset: ', len(coco_dataset))  # 40670
-    train_ds, val_test_ds = train_test_split(coco_dataset, train_size=0.7, shuffle=True, random_state=42)
-    print('Len Training dataset: ', len(train_ds))  # 28469
+    perc_data = 0.1  # percentage of dataset we are using
+
+    ds, _ = train_test_split(coco_dataset, train_size=perc_data, shuffle=True, random_state=42)
+
+    train_ds, val_test_ds = train_test_split(ds, train_size=0.7, shuffle=True, random_state=42)
+    print('Len Training dataset: ', len(train_ds))  # 28469     #
     val_ds, test_ds = train_test_split(val_test_ds, test_size=1 / 3, shuffle=True, random_state=42)
-    print('Len Validation dataset: ', len(val_ds))  # 8134
-    print('Len Testing dataset: ', len(test_ds))  # 4067
+    print('Len Validation dataset: ', len(val_ds))  # 8134     #
+    print('Len Testing dataset: ', len(test_ds))  # 4067     #
 
     train_ds_1, train_ds_2 = train_test_split(train_ds, train_size=0.5, shuffle=True, random_state=42)
     val_ds_1, val_ds_2 = train_test_split(val_ds, train_size=0.5, shuffle=True, random_state=42)
     test_ds_1, test_ds_2 = train_test_split(test_ds, train_size=0.5, shuffle=True, random_state=42)
-    print('Len Training dataset_1: ', len(train_ds_1))  # 14234
-    print('Len Training dataset_2: ', len(train_ds_2))  # 14235
-    print('Len Validation dataset_1: ', len(val_ds_1))  # 4067
-    print('Len Validation dataset_2: ', len(val_ds_2))  # 4067
-    print('Len Testing dataset_1: ', len(test_ds_1))    # 2033
-    print('Len Testing dataset_2: ', len(test_ds_2))    # 2034
+    print('Len Training dataset_1: ', len(train_ds_1))  # 14234     #
+    print('Len Training dataset_2: ', len(train_ds_2))  # 14235     #
+    print('Len Validation dataset_1: ', len(val_ds_1))  # 4067     #
+    print('Len Validation dataset_2: ', len(val_ds_2))  # 4067     #
+    print('Len Testing dataset_1: ', len(test_ds_1))    # 2033     #
+    print('Len Testing dataset_2: ', len(test_ds_2))    # 2034     #
 
     train_dl_1 = torch.utils.data.DataLoader(train_ds_1, batch_size=8, shuffle=True, num_workers=1)
     train_dl_2 = torch.utils.data.DataLoader(train_ds_2, batch_size=8, shuffle=True, num_workers=1)

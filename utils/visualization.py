@@ -8,6 +8,7 @@ from utils.constants import id2label
 
 
 def visualize_segmentation(segmentation_tensor):
+    # todo le labels vengono tagliate a destra e in basso
     # get all the unique numbers
     labels_ids = torch.unique(segmentation_tensor).tolist()
     print(labels_ids)
@@ -30,11 +31,12 @@ def visualize_segmentation(segmentation_tensor):
     plt.axis('off')
     plt.title('Segmentation Map')
 
-    # Adjust layout to prevent overlapping
-    plt.tight_layout()
-
     handles = [mpatches.Patch(color=coco_color_map[label_id], label=id2label[label_id]) for label_id in labels_ids]
 
     # Create legend with class labels
     plt.legend(handles=handles, labels=legend_labels, loc='upper left', bbox_to_anchor=(1, 1))
+
+    # Adjust layout to prevent overlapping
+    plt.tight_layout()
+
     plt.show()

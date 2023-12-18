@@ -80,6 +80,7 @@ def train(stud_id, path_to_save_model=None):
         running_loss = 0
         n = 0
         for i, (images, _) in enumerate(train_dl):
+            print("# epoch: ", epoch, " - i: ", i)
             batch_size = images.shape[0]
             n += batch_size
 
@@ -136,12 +137,12 @@ def train(stud_id, path_to_save_model=None):
 
         train_loss.append(running_loss.detach().cpu() / n)
 
-        # Todo validation
+        # Todo validation: compute metrics
         student.eval()
         with torch.no_grad():
             running_loss = 0
             n = 0
-            for i, (images, _) in enumerate(train_dl):
+            for i, (images, _) in enumerate(val_dl):
                 batch_size = images.shape[0]
                 n += batch_size
 
@@ -150,17 +151,10 @@ def train(stud_id, path_to_save_model=None):
                 semantic_inputs["task_inputs"] = semantic_inputs["task_inputs"].repeat(batch_size, 1)
                 # print("pixel_values: ", semantic_inputs['pixel_values'].shape)
 
-                # Forward pass with the teacher model - do not save gradients here as we do not change the teacher's weights
                 teacher_logits, pseudo_labels = teacher_forward(teacher, **semantic_inputs)
-                # print("teacher_logits: ", teacher_logits.shape)
-                # print("pseudo_labels: ", pseudo_labels.shape)
 
-                # Forward pass with the student model
                 student_logits, preds = student(semantic_inputs["pixel_values"])
-                # print("student_logits: ", student_logits.shape)  # not probability
-                # print("preds: ", preds.shape)
 
-                # Soften the student logits by applying softmax first and log() second
                 soft_targets = F.softmax(teacher_logits / T, dim=1)
                 soft_prob = F.log_softmax(student_logits / T, dim=1)
 
@@ -168,11 +162,8 @@ def train(stud_id, path_to_save_model=None):
                 soft_targets = soft_targets.permute(0, 2, 3, 1).reshape(-1, 133)
                 soft_prob = soft_prob.permute(0, 2, 3, 1).reshape(-1, 133)
 
-                # Calculate the soft targets loss. ["Distilling the knowledge in a neural network"]
-                # KL Div:
                 soft_targets_loss = F.kl_div(soft_prob, soft_targets, reduction='batchmean') * (T ** 2)
 
-                # Calculate the true label loss
                 label_loss = ce_loss(student_logits, pseudo_labels)
 
                 # Weighted sum of the two losses
@@ -187,14 +178,12 @@ def train(stud_id, path_to_save_model=None):
                 running_loss += loss * batch_size
 
             val_loss.append(running_loss.detach().cpu() / n)
-            if running_loss / n < val_loss_best:
-                val_loss_best = running_loss / n
 
         '''if use_scheduler:
             scheduler.step()'''
 
         # Save and plot
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 1 == 0: # todo %10
 
             if path_to_save_model is not None:
                 checkpoint_path = path_to_save_model + f'student_ckpt_epoch_{epoch + 1}.pth'
@@ -202,7 +191,7 @@ def train(stud_id, path_to_save_model=None):
 
             plt.figure(figsize=(10, 6))
             plt.plot(range(epoch + 1), train_loss, label='Training Loss', marker='o')
-            # plt.plot(range(epoch + 1), val_loss, label='Validation Loss', marker='o')
+            plt.plot(range(epoch + 1), val_loss, label='Validation Loss', marker='o')
             plt.xlabel('Epochs')
             plt.ylabel('Loss')
             plt.title('Training and Validation Loss')
@@ -215,11 +204,11 @@ def train(stud_id, path_to_save_model=None):
 
             plt.show()
 
-    visualize_segmentation(pseudo_labels[0])
-    visualize_segmentation(pseudo_labels[1])
+            visualize_segmentation(pseudo_labels[0])
+            visualize_segmentation(pseudo_labels[1])
 
-    visualize_segmentation(preds[0])
-    visualize_segmentation(preds[1])
+            visualize_segmentation(preds[0])
+            visualize_segmentation(preds[1])
 
 
 if __name__ == '__main__':
