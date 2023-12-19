@@ -8,7 +8,7 @@ from torch.nn import functional as F
 from transformers import OneFormerProcessor, AutoModelForUniversalSegmentation
 
 from model.encoder_decoder import SwinDeepLabV3Plus
-from utils.losses import DiceLoss
+from utils.losses import DiceLoss, CrossEntropyFocalLoss
 from utils.visualization import visualize_segmentation
 
 
@@ -55,15 +55,15 @@ def train(stud_id, path_to_save_model=None):
     val_dl = torch.load(f'./data_loaders/Validation_dl_{stud_id}.pt')
 
     # Hyper-params settings
-    learning_rate = 1e-03
+    learning_rate = 1e-02
     epochs = 100
     T = 10  # Todo
 
     # Weights sum up to 1
     # TODO paper 2015 dice che deve essere più alto al resto... online è sempre più basso del resto (tipo regularization)
-    kl_loss_weight = 0.2
-    ce_loss_weight = 0.4
-    dice_loss_weight = 0.4
+    kl_loss_weight = 0.8
+    ce_loss_weight = 0.1
+    dice_loss_weight = 0.1
 
     # Todo capire se possono essere utili
     clip_grad = None
@@ -71,7 +71,8 @@ def train(stud_id, path_to_save_model=None):
     '''if use_scheduler:
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma) '''
 
-    ce_loss = nn.CrossEntropyLoss()
+    ce_loss = nn.CrossEntropyLoss()  # todo usiamo focal al posto suo?
+    ce_loss = CrossEntropyFocalLoss()  # focal loss
     dice_loss = DiceLoss()
     optimizer = optim.Adam(student.parameters(), lr=learning_rate)  # todo use adam?
 
@@ -81,11 +82,18 @@ def train(stud_id, path_to_save_model=None):
     train_loss = []
     val_loss = []
 
+    kl_l = []
+    dice_l = []
+    focal_l = []
+
     # TODO add running loss and fix training loop
     for epoch in range(epochs):
 
         student.train()
         running_loss = 0
+        running_kl = 0
+        running_dice = 0
+        running_focal = 0
         n = 0
         for i, (images, _) in enumerate(train_dl):
             print("# epoch: ", epoch, " - i: ", i)
@@ -144,8 +152,14 @@ def train(stud_id, path_to_save_model=None):
 
             optimizer.step()
             running_loss += loss * batch_size
+            running_kl += kl_loss_weight * kl_div_res * batch_size
+            running_dice += ce_loss_weight * ce_res * batch_size
+            running_focal += dice_loss_weight * dice_res * batch_size
 
         train_loss.append(running_loss.detach().cpu() / n)
+        kl_l.append(running_kl.detach().cpu() / n)
+        dice_l.append(running_dice.detach().cpu() / n)
+        focal_l.append(running_focal.detach().cpu() / n)
 
         # Todo validation: compute metrics
         student.eval()
@@ -201,9 +215,14 @@ def train(stud_id, path_to_save_model=None):
             plt.figure(figsize=(10, 6))
             plt.plot(range(epoch + 1), train_loss, label='Training Loss', marker='o')
             plt.plot(range(epoch + 1), val_loss, label='Validation Loss', marker='o')
+
+            plt.plot(range(epoch + 1), kl_l, label='KL Loss', marker='o')
+            plt.plot(range(epoch + 1), dice_l, label='Dice Loss', marker='o')
+            plt.plot(range(epoch + 1), focal_l, label='Focal Loss', marker='o')
+
             plt.xlabel('Epochs')
             plt.ylabel('Loss')
-            plt.title('Training and Validation Loss')
+            plt.title('Training and Validation Losses')
             plt.legend()
             plt.grid(True)
 
