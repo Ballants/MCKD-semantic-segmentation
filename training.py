@@ -80,6 +80,7 @@ def train(stud_id, path_to_save_model=None):
     ce_loss = nn.CrossEntropyLoss()  # todo usiamo focal al posto suo?
     # ce_loss = CrossEntropyFocalLoss()  # focal loss
     dice_loss = DiceLoss()
+    jaccard = MulticlassJaccardIndex(num_classes=133)
 
     # Todo training loop
     teacher.eval()  # Teacher set to evaluation mode
@@ -90,6 +91,9 @@ def train(stud_id, path_to_save_model=None):
     kl_l = []
     dice_l = []
     focal_l = []
+
+    jaccard_index_list = []
+    f1_score_list = []
 
     # TODO add running loss and fix training loop
     for epoch in range(epochs):
@@ -152,8 +156,8 @@ def train(stud_id, path_to_save_model=None):
             optimizer.step()
             running_loss += loss * batch_size
             running_kl += kl_loss_weight * kl_div_res * batch_size
-            running_dice += ce_loss_weight * ce_res * batch_size
-            running_focal += dice_loss_weight * dice_res * batch_size
+            running_dice += dice_loss_weight * dice_res * batch_size
+            running_focal += ce_loss_weight * ce_res * batch_size
 
         train_loss.append(running_loss.detach().cpu() / n)
         kl_l.append(running_kl.detach().cpu() / n)
@@ -165,6 +169,10 @@ def train(stud_id, path_to_save_model=None):
         with torch.no_grad():
             running_loss = 0
             n = 0
+
+            jaccard_index = 0
+            f1_score = 0
+
             for i, (images, _) in enumerate(val_dl):
                 batch_size = images.shape[0]
                 n += batch_size
@@ -192,11 +200,17 @@ def train(stud_id, path_to_save_model=None):
                 ce_res = ce_loss(student_logits, pseudo_labels)
                 dice_res = dice_loss(student_logits, pseudo_labels)
 
+                jaccard_index += jaccard(soft_prob, soft_targets) * batch_size
+                f1_score += multiclass_f1_score(soft_prob, soft_targets,
+                                                num_classes=133, average="weighted") * batch_size
+
                 loss = kl_loss_weight * kl_div_res + ce_loss_weight * ce_res + dice_loss_weight * dice_res
 
                 running_loss += loss * batch_size
 
             val_loss.append(running_loss.detach().cpu() / n)
+            jaccard_index_list.append(jaccard_index.detach().cpu() / n)
+            f1_score_list.append(f1_score.detach().cpu() / n)
 
         if use_scheduler:
             scheduler.step()
@@ -228,14 +242,27 @@ def train(stud_id, path_to_save_model=None):
 
             plt.show()
 
+            plt.figure(figsize=(10, 6))
+            plt.plot(range(epoch + 1), jaccard_index_list, label='Jaccard index', marker='o')
+            plt.plot(range(epoch + 1), f1_score_list, label='F1 score', marker='o')
+
+            plt.xlabel('Epochs')
+            plt.ylabel('Loss')
+            plt.title('Metrics')
+            plt.legend()
+            plt.grid(True)
+
+            plt.show()
+
             visualize_segmentation(pseudo_labels[0])
             visualize_segmentation(pseudo_labels[1])
 
             visualize_segmentation(preds[0])
             visualize_segmentation(preds[1])
 
+
 # todo review
-def test(stud_id, path_to_save_model=None):
+def test(stud_id, path_to_model):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     # print(torch.cuda.is_available())
     print('Device: ', device)
@@ -246,6 +273,7 @@ def test(stud_id, path_to_save_model=None):
 
     # processor_student = AutoImageProcessor.from_pretrained("microsoft/swin-tiny-patch4-window7-224") # inutile
     student = SwinDeepLabV3Plus(num_classes=133).to(device)
+    student.load_state_dict(path_to_model)
 
     # freezing backbone's parameters
     for param in student.backbone.parameters():
@@ -257,72 +285,50 @@ def test(stud_id, path_to_save_model=None):
     # Set metrics
     jaccard = MulticlassJaccardIndex(num_classes=133)
 
-    epochs = 20
     T = 2  # Temperature
 
-    jaccard_index_list = []
-    f1_score_list = []
+    student.eval()
 
-    for epoch in range(epochs):
-        student.eval()
+    with torch.no_grad():
+        n = 0
 
-        with torch.no_grad():
-            n = 0
+        jaccard_index = 0
+        f1_score = 0
 
-            jaccard_index = 0
-            f1_score = 0
+        for i, (images, _) in enumerate(test_dl):
+            batch_size = images.shape[0]
+            n += batch_size
 
-            for i, (images, _) in enumerate(test_dl):
-                batch_size = images.shape[0]
-                n += batch_size
+            semantic_inputs = processor_teacher(images=images, task_inputs=["semantic"], return_tensors="pt",
+                                                do_rescale=False).to(device)
+            semantic_inputs["task_inputs"] = semantic_inputs["task_inputs"].repeat(batch_size, 1)
 
-                semantic_inputs = processor_teacher(images=images, task_inputs=["semantic"], return_tensors="pt",
-                                                    do_rescale=False).to(device)
-                semantic_inputs["task_inputs"] = semantic_inputs["task_inputs"].repeat(batch_size, 1)
+            teacher_logits, pseudo_labels = teacher_forward(teacher, **semantic_inputs)
 
-                teacher_logits, pseudo_labels = teacher_forward(teacher, **semantic_inputs)
+            student_logits, preds = student(semantic_inputs["pixel_values"])
 
-                student_logits, preds = student(semantic_inputs["pixel_values"])
+            soft_targets = F.softmax(teacher_logits / T, dim=1)
+            soft_prob = F.log_softmax(student_logits / T, dim=1)
 
-                soft_targets = F.softmax(teacher_logits / T, dim=1)
-                soft_prob = F.log_softmax(student_logits / T, dim=1)
+            # [batch * width * height, classes]
+            soft_targets = soft_targets.permute(0, 2, 3, 1).reshape(-1, 133)
+            soft_prob = soft_prob.permute(0, 2, 3, 1).reshape(-1, 133)
 
-                # [batch * width * height, classes]
-                soft_targets = soft_targets.permute(0, 2, 3, 1).reshape(-1, 133)
-                soft_prob = soft_prob.permute(0, 2, 3, 1).reshape(-1, 133)
+            jaccard_index += jaccard(soft_prob, soft_targets) * batch_size
+            f1_score += multiclass_f1_score(soft_prob, soft_targets,
+                                            num_classes=133, average="weighted") * batch_size
 
-                jaccard_index += jaccard(soft_prob, soft_targets) * batch_size
-                f1_score += multiclass_f1_score(soft_prob, soft_targets,
-                                                num_classes=133, average="weighted") * batch_size
+        jaccard_index = jaccard_index.detach().cpu() / n
+        f1_score = f1_score.detach().cpu() / n
 
-            jaccard_index_list.append(jaccard_index.detach().cpu() / n)
-            f1_score_list.append(f1_score.detach().cpu() / n)
+    print(f"Jaccard Index: {jaccard_index}")
+    print(f"F1 Score: {f1_score}")
 
-        # Save and plot
-        if (epoch + 1) % 10 == 0:  # todo %10
+    visualize_segmentation(pseudo_labels[0])
+    visualize_segmentation(pseudo_labels[1])
 
-            if path_to_save_model is not None:
-                checkpoint_path = path_to_save_model + f'student_ckpt_epoch_{epoch + 1}.pth'
-                torch.save(student.state_dict(), checkpoint_path)
-
-            # todo split plot
-            plt.figure(figsize=(10, 6))
-            plt.plot(range(epoch + 1), jaccard_index_list, label='Jaccard index', marker='o')
-            plt.plot(range(epoch + 1), f1_score_list, label='F1 score', marker='o')
-
-            plt.xlabel('Epochs')
-            plt.ylabel('Loss')
-            plt.title('Test metrics')
-            plt.legend()
-            plt.grid(True)
-
-            plt.show()
-
-            visualize_segmentation(pseudo_labels[0])
-            visualize_segmentation(pseudo_labels[1])
-
-            visualize_segmentation(preds[0])
-            visualize_segmentation(preds[1])
+    visualize_segmentation(preds[0])
+    visualize_segmentation(preds[1])
 
 
 if __name__ == '__main__':
