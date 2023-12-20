@@ -25,12 +25,14 @@ def teacher_forward(teacher, **inputs):
     # Semantic segmentation logits of shape (batch_size, num_classes, height, width)
     segmentation_logits = torch.einsum("bqc, bqhw -> bchw", masks_classes, masks_probs)  # not probability
     # print("sum: ", torch.sum(segmentation_logits[:, :, 0, 0], dim=1))
+    segmentation_logits = F.interpolate(segmentation_logits, size=(128, 128),
+                                        mode='bilinear', align_corners=False)
 
-    # TODO l'ho aggiunto io. Il post-processor fa l'argmax direttamente sui logits
     semantic_segmentation = segmentation_logits.softmax(dim=1)
 
     semantic_segmentation = semantic_segmentation.argmax(dim=1)
-
+    # print("segmentation_logits: ", segmentation_logits.shape)
+    # print("semantic_segmentation: ", semantic_segmentation.shape)
     return segmentation_logits, semantic_segmentation
 
 
@@ -54,27 +56,28 @@ def train(stud_id, path_to_save_model=None):
     train_dl = torch.load(f'./data_loaders/Train_dl_{stud_id}.pt')
     val_dl = torch.load(f'./data_loaders/Validation_dl_{stud_id}.pt')
 
-    # Hyper-params settings
-    learning_rate = 1e-02
-    epochs = 100
-    T = 10  # Todo
+    # Hyper-params settings # todo change
+    learning_rate = 1e-03  # learning rate
+    milestones = [5, 10, 15]  # the epochs after which the learning rate is adjusted by gamma
+    gamma = 0.1  # gamma correction to the learning rate, after reaching the milestone epochs
+    weight_decay = 1e-05  # weight decay (L2 penalty)
+    epochs = 20
+    T = 2  # Temperature
+
+    optimizer = optim.Adam(student.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    use_scheduler = True  # use MultiStepLR scheduler
+    if use_scheduler:
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
 
     # Weights sum up to 1
     # TODO paper 2015 dice che deve essere più alto al resto... online è sempre più basso del resto (tipo regularization)
-    kl_loss_weight = 0.8
-    ce_loss_weight = 0.1
-    dice_loss_weight = 0.1
-
-    # Todo capire se possono essere utili
-    clip_grad = None
-    use_scheduler = True
-    '''if use_scheduler:
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma) '''
+    kl_loss_weight = 0.2
+    ce_loss_weight = 0.4
+    dice_loss_weight = 0.4
 
     ce_loss = nn.CrossEntropyLoss()  # todo usiamo focal al posto suo?
-    ce_loss = CrossEntropyFocalLoss()  # focal loss
+    # ce_loss = CrossEntropyFocalLoss()  # focal loss
     dice_loss = DiceLoss()
-    optimizer = optim.Adam(student.parameters(), lr=learning_rate)  # todo use adam?
 
     # Todo training loop
     teacher.eval()  # Teacher set to evaluation mode
@@ -107,14 +110,18 @@ def train(stud_id, path_to_save_model=None):
 
             optimizer.zero_grad()
 
-            # Forward pass with the teacher model - do not save gradients here as we do not change the teacher's weights
+            # Forward pass of the teacher model - do not save gradients to not change the teacher's weights
             with torch.no_grad():
                 teacher_logits, pseudo_labels = teacher_forward(teacher, **semantic_inputs)
             # print("teacher_logits: ", teacher_logits.shape)
             # print("pseudo_labels: ", pseudo_labels.shape)
 
-            # Forward pass with the student model
-            student_logits, preds = student(semantic_inputs["pixel_values"])
+            student_input = F.interpolate(semantic_inputs["pixel_values"], size=(512, 512),
+                                          mode='bilinear', align_corners=False)
+            # print("student_input: ", student_input.shape)
+
+            # Forward pass of the student model
+            student_logits, preds = student(student_input)
             # print("student_logits: ", student_logits.shape)  # not probability
             # print("preds: ", preds.shape)
 
@@ -138,17 +145,7 @@ def train(stud_id, path_to_save_model=None):
             # Weighted sum of the two losses
             loss = kl_loss_weight * kl_div_res + ce_loss_weight * ce_res + dice_loss_weight * dice_res
 
-            '''print("####### epoch: ", epoch, " #######")
-            print("KL Loss: ", soft_targets_loss)
-            print("CE Loss: ", label_loss)
-            print("Loss: ", loss)
-            print("\n")'''
-
             loss.backward()
-
-            # Todo togliere?
-            if clip_grad is not None:
-                torch.nn.utils.clip_grad_norm_(student.parameters(), clip_grad)
 
             optimizer.step()
             running_loss += loss * batch_size
@@ -192,18 +189,12 @@ def train(stud_id, path_to_save_model=None):
 
                 loss = kl_loss_weight * kl_div_res + ce_loss_weight * ce_res + dice_loss_weight * dice_res
 
-                '''print("####### epoch: ", epoch, " #######")
-                print("KL Loss: ", soft_targets_loss)
-                print("CE Loss: ", label_loss)
-                print("Loss: ", loss)
-                print("\n")'''
-
                 running_loss += loss * batch_size
 
             val_loss.append(running_loss.detach().cpu() / n)
 
-        '''if use_scheduler:
-            scheduler.step()'''
+        if use_scheduler:
+            scheduler.step()
 
         # Save and plot
         if (epoch + 1) % 1 == 0:  # todo %10
