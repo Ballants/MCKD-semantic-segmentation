@@ -174,7 +174,10 @@ def train(stud_id, path_to_save_model=None):
 
                 teacher_logits, pseudo_labels = teacher_forward(teacher, **semantic_inputs)
 
-                student_logits, preds = student(semantic_inputs["pixel_values"])
+                student_input = F.interpolate(semantic_inputs["pixel_values"], size=(512, 512),
+                                          mode='bilinear', align_corners=False)
+            
+                student_logits, preds = student(student_input)
 
                 soft_targets = F.softmax(teacher_logits / T, dim=1)
                 soft_prob = F.log_softmax(student_logits / T, dim=1)
