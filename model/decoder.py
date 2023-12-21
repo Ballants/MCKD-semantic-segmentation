@@ -16,10 +16,10 @@ class DeepLabHeadV3Plus(nn.Module):
         self.aspp = ASPP(in_channels, aspp_dilate)
 
         self.classifier = nn.Sequential(
-            nn.Conv2d(304, 256, 3, padding=1, bias=False),  # Todo change accordingly to original image shape
+            nn.Conv2d(304, 256, 3, padding=1, bias=False),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.1),  # added for fun
+            nn.Dropout(0.1),
             nn.Conv2d(256, num_classes, 1)
         )
         self._init_weight()
@@ -55,7 +55,7 @@ class ASPPPooling(nn.Sequential):
         super(ASPPPooling, self).__init__(
             nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(in_channels, out_channels, 1, stride=1, bias=False),
-            nn.BatchNorm2d(out_channels),  # Todo error
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True))
 
     def forward(self, x):

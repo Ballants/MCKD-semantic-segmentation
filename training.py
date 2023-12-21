@@ -14,6 +14,21 @@ from utils.losses import DiceLoss
 from utils.visualization import visualize_segmentation
 
 
+# todo hyper-parameters
+learning_rate = 1e-03  # learning rate
+milestones = [3, 6, 13]  # the epochs after which the learning rate is adjusted by gamma
+gamma = 0.1  # gamma correction to the learning rate, after reaching the milestone epochs
+weight_decay = 1e-05  # weight decay (L2 penalty)
+epochs = 20
+T = 2  # Temperature
+
+# Weights sum up to 1
+# TODO paper 2015 dice che deve essere più alto al resto... online è sempre più basso del resto (tipo regularization)
+kl_loss_weight = 1
+ce_loss_weight = 0.25
+dice_loss_weight = 1
+
+
 def teacher_forward(teacher, **inputs):
     raw_out = teacher(**inputs)
 
@@ -57,30 +72,19 @@ def train(stud_id, path_to_save_model=None):
     # Load dataloaders
     train_dl = torch.load(f'./data_loaders/Train_dl_{stud_id}.pt')
     val_dl = torch.load(f'./data_loaders/Validation_dl_{stud_id}.pt')
-
-    # Hyper-params settings # todo change
-    learning_rate = 1e-03  # learning rate
-    milestones = [5, 10, 15]  # the epochs after which the learning rate is adjusted by gamma
-    gamma = 0.1  # gamma correction to the learning rate, after reaching the milestone epochs
-    weight_decay = 1e-05  # weight decay (L2 penalty)
-    epochs = 20
-    T = 2  # Temperature
+    '''train_dl = torch.load(f'./data_loaders/Test_dl_{1}.pt')
+    val_dl = torch.load(f'./data_loaders/Test_dl_{2}.pt')'''
 
     optimizer = optim.Adam(student.parameters(), lr=learning_rate, weight_decay=weight_decay)
     use_scheduler = True  # use MultiStepLR scheduler
     if use_scheduler:
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
 
-    # Weights sum up to 1
-    # TODO paper 2015 dice che deve essere più alto al resto... online è sempre più basso del resto (tipo regularization)
-    kl_loss_weight = 0.2
-    ce_loss_weight = 0.4
-    dice_loss_weight = 0.4
-
     ce_loss = nn.CrossEntropyLoss()  # todo usiamo focal al posto suo?
     # ce_loss = CrossEntropyFocalLoss()  # focal loss
     dice_loss = DiceLoss()
-    jaccard = MulticlassJaccardIndex(num_classes=133)
+
+    jaccard = MulticlassJaccardIndex(num_classes=133).to(device)
 
     # Todo training loop
     teacher.eval()  # Teacher set to evaluation mode
@@ -95,7 +99,7 @@ def train(stud_id, path_to_save_model=None):
     jaccard_index_list = []
     f1_score_list = []
 
-    # TODO add running loss and fix training loop
+    ## Training ##
     for epoch in range(epochs):
 
         student.train()
@@ -164,7 +168,7 @@ def train(stud_id, path_to_save_model=None):
         dice_l.append(running_dice.detach().cpu() / n)
         focal_l.append(running_focal.detach().cpu() / n)
 
-        # Todo validation: compute metrics
+        ## Validation ##
         student.eval()
         with torch.no_grad():
             running_loss = 0
@@ -200,8 +204,8 @@ def train(stud_id, path_to_save_model=None):
                 ce_res = ce_loss(student_logits, pseudo_labels)
                 dice_res = dice_loss(student_logits, pseudo_labels)
 
-                jaccard_index += jaccard(soft_prob, soft_targets) * batch_size
-                f1_score += multiclass_f1_score(soft_prob, soft_targets,
+                jaccard_index += jaccard(preds, pseudo_labels) * batch_size
+                f1_score += multiclass_f1_score(preds.reshape(-1), pseudo_labels.reshape(-1),
                                                 num_classes=133, average="weighted") * batch_size
 
                 loss = kl_loss_weight * kl_div_res + ce_loss_weight * ce_res + dice_loss_weight * dice_res
@@ -218,7 +222,7 @@ def train(stud_id, path_to_save_model=None):
         # Save and plot
         if (epoch + 1) % 1 == 0:  # todo %10
 
-            if path_to_save_model is not None:
+            if path_to_save_model is not None and (epoch + 1) % 5 == 0:
                 checkpoint_path = path_to_save_model + f'student_ckpt_epoch_{epoch + 1}.pth'
                 torch.save(student.state_dict(), checkpoint_path)
 
@@ -248,7 +252,7 @@ def train(stud_id, path_to_save_model=None):
 
             plt.xlabel('Epochs')
             plt.ylabel('Loss')
-            plt.title('Metrics')
+            plt.title('Validation Metrics')
             plt.legend()
             plt.grid(True)
 
@@ -264,8 +268,6 @@ def train(stud_id, path_to_save_model=None):
 # todo review
 def test(stud_id, path_to_model):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    # print(torch.cuda.is_available())
-    print('Device: ', device)
     torch.cuda.empty_cache()
 
     processor_teacher = OneFormerProcessor.from_pretrained("shi-labs/oneformer_coco_swin_large")
@@ -273,7 +275,7 @@ def test(stud_id, path_to_model):
 
     # processor_student = AutoImageProcessor.from_pretrained("microsoft/swin-tiny-patch4-window7-224") # inutile
     student = SwinDeepLabV3Plus(num_classes=133).to(device)
-    student.load_state_dict(path_to_model)
+    student.load_state_dict(torch.load(path_to_model))
 
     # freezing backbone's parameters
     for param in student.backbone.parameters():
@@ -283,9 +285,7 @@ def test(stud_id, path_to_model):
     test_dl = torch.load(f'./data_loaders/Test_dl_{stud_id}.pt')
 
     # Set metrics
-    jaccard = MulticlassJaccardIndex(num_classes=133)
-
-    T = 2  # Temperature
+    jaccard = MulticlassJaccardIndex(num_classes=133).to(device)
 
     student.eval()
 
@@ -302,20 +302,14 @@ def test(stud_id, path_to_model):
             semantic_inputs = processor_teacher(images=images, task_inputs=["semantic"], return_tensors="pt",
                                                 do_rescale=False).to(device)
             semantic_inputs["task_inputs"] = semantic_inputs["task_inputs"].repeat(batch_size, 1)
-
+            student_input = F.interpolate(semantic_inputs["pixel_values"], size=(512, 512),
+                                          mode='bilinear', align_corners=False)
             teacher_logits, pseudo_labels = teacher_forward(teacher, **semantic_inputs)
 
-            student_logits, preds = student(semantic_inputs["pixel_values"])
+            student_logits, preds = student(student_input)
 
-            soft_targets = F.softmax(teacher_logits / T, dim=1)
-            soft_prob = F.log_softmax(student_logits / T, dim=1)
-
-            # [batch * width * height, classes]
-            soft_targets = soft_targets.permute(0, 2, 3, 1).reshape(-1, 133)
-            soft_prob = soft_prob.permute(0, 2, 3, 1).reshape(-1, 133)
-
-            jaccard_index += jaccard(soft_prob, soft_targets) * batch_size
-            f1_score += multiclass_f1_score(soft_prob, soft_targets,
+            jaccard_index += jaccard(preds, pseudo_labels) * batch_size
+            f1_score += multiclass_f1_score(preds.reshape(-1), pseudo_labels.reshape(-1),
                                             num_classes=133, average="weighted") * batch_size
 
         jaccard_index = jaccard_index.detach().cpu() / n
@@ -332,9 +326,14 @@ def test(stud_id, path_to_model):
 
 
 if __name__ == '__main__':
+    path_to_save_model = "./checkpoints/"
     print("### Starting training... ###")
     t0 = time.time()
-    train(stud_id=1)
+    train(stud_id=1, path_to_save_model=path_to_save_model)
     t1 = time.time()
     print("training/validation time: {0:.2f}s".format(t1 - t0))
-    print("### DataLoader ready ###")
+
+    t2 = time.time()
+    test(stud_id=1, path_to_model = path_to_save_model + "student_ckpt_epoch_20.pth")
+    t3 = time.time()
+    print("training/validation time for the final student: {0:.2f}s".format(t3 - t2))
