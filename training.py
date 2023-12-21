@@ -13,7 +13,6 @@ from model.encoder_decoder import SwinDeepLabV3Plus
 from utils.losses import DiceLoss
 from utils.visualization import visualize_segmentation
 
-
 # todo hyper-parameters
 learning_rate = 1e-03  # learning rate
 milestones = [3, 6, 13]  # the epochs after which the learning rate is adjusted by gamma
@@ -189,8 +188,8 @@ def train(stud_id, path_to_save_model=None):
                 teacher_logits, pseudo_labels = teacher_forward(teacher, **semantic_inputs)
 
                 student_input = F.interpolate(semantic_inputs["pixel_values"], size=(512, 512),
-                                          mode='bilinear', align_corners=False)
-            
+                                              mode='bilinear', align_corners=False)
+
                 student_logits, preds = student(student_input)
 
                 soft_targets = F.softmax(teacher_logits / T, dim=1)
@@ -334,6 +333,6 @@ if __name__ == '__main__':
     print("training/validation time: {0:.2f}s".format(t1 - t0))
 
     t2 = time.time()
-    test(stud_id=1, path_to_model = path_to_save_model + "student_ckpt_epoch_20.pth")
+    test(stud_id=1, path_to_model=path_to_save_model + "student_ckpt_epoch_20.pth")
     t3 = time.time()
     print("training/validation time for the final student: {0:.2f}s".format(t3 - t2))
