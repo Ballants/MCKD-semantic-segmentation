@@ -4,11 +4,12 @@ import numpy as np
 import torch
 from matplotlib import cm
 
-from utils.constants import id2label
+from utils.constants import id2label_cityscapes
 
 
-def visualize_segmentation(segmentation_tensor):
-    # todo le labels vengono tagliate a destra e in basso
+def visualize_segmentation(segmentation_tensor, path_to_save=None):
+    id2label = id2label_cityscapes  # todo change
+
     # get all the unique numbers
     labels_ids = torch.unique(segmentation_tensor).tolist()
     print(labels_ids)
@@ -27,15 +28,21 @@ def visualize_segmentation(segmentation_tensor):
     legend_labels = [id2label[class_id] for class_id in labels_ids]
 
     # Display the segmented image with legend
+    plt.figure(figsize=(9, 9))
     plt.imshow(segmented_image)
     plt.axis('off')
     plt.title('Segmentation Map')
 
     # Adjust layout to prevent overlapping
-    plt.tight_layout()
+    # plt.tight_layout()
 
     handles = [mpatches.Patch(color=coco_color_map[label_id], label=id2label[label_id]) for label_id in labels_ids]
 
     # Create legend with class labels
     plt.legend(handles=handles, labels=legend_labels, loc='upper left', bbox_to_anchor=(1, 1))
+    plt.tight_layout()
+
+    if path_to_save is not None:
+        plt.savefig(path_to_save, bbox_inches='tight')
+
     plt.show()
