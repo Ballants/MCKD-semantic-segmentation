@@ -1,2 +1,5 @@
 /coco_dataset/
+/cityscapes_dataset/
 /data_loaders/
+/checkpoints/
+
