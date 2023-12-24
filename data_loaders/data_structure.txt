@@ -1,0 +1,14 @@
+data_loaders/
+|-- cityscapes/
+|   |-- Test_dl.pt
+|   |-- Train_dl_1.pt
+|   |-- Train_dl_2.pt
+|   |-- Validation_dl_1.pt
+|   |-- Validation_dl_2.pt
+|-- coco/
+|   |-- Test_dl.pt
+|   |-- Train_dl.pt
+|   |-- Train_dl_1.pt
+|   |-- Train_dl_2.pt
+|   |-- Validation_dl_1.pt
+|   |-- Validation_dl_2.pt
