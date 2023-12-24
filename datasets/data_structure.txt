@@ -1,0 +1,11 @@
+datasets/
+|-- cityscapes_dataset/
+|   |-- gtFine/
+|   |   |-- ...
+|   |-- leftImg8bit/
+|   |   |-- ...
+|-- coco_dataset/
+|   |-- annotations/
+|   |   |-- image_info_test2017.json
+|   |-- test2017/
+|   |   |-- ...

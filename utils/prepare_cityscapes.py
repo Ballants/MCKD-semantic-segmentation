@@ -51,21 +51,21 @@ def prepare_data():
         transforms.ToTensor(),
     ])
 
-    train_ds = Cityscapes(root='../cityscapes_dataset/',
+    train_ds = Cityscapes(root='../datasets/cityscapes_dataset/',
                           split="train",
                           target_type="semantic",
                           mode="fine",
                           transform=data_transform,
                           target_transform=target_transforms)
 
-    val_ds = Cityscapes(root='../cityscapes_dataset/',
+    val_ds = Cityscapes(root='../datasets/cityscapes_dataset/',
                         split="val",
                         target_type="semantic",
                         mode="fine",
                         transform=data_transform,
                         target_transform=target_transforms)
 
-    test_ds = Cityscapes(root='../cityscapes_dataset/',
+    test_ds = Cityscapes(root='../datasets/cityscapes_dataset/',
                          split="test",
                          target_type="semantic",
                          mode="fine",
@@ -78,20 +78,16 @@ def prepare_data():
 
     train_ds_1, train_ds_2 = train_test_split(train_ds, train_size=0.5, shuffle=True, random_state=42)
     val_ds_1, val_ds_2 = train_test_split(val_ds, train_size=0.5, shuffle=True, random_state=42)
-    test_ds_1, test_ds_2 = train_test_split(test_ds, train_size=0.5, shuffle=True, random_state=42)
     print('Len Training dataset_1: ', len(train_ds_1))  # 1487
     print('Len Training dataset_2: ', len(train_ds_2))  # 1488
     print('Len Validation dataset_1: ', len(val_ds_1))  # 250
     print('Len Validation dataset_2: ', len(val_ds_2))  # 250
-    print('Len Testing dataset_1: ', len(test_ds_1))  # 762
-    print('Len Testing dataset_2: ', len(test_ds_2))  # 763
 
     train_dl_1 = torch.utils.data.DataLoader(train_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
     train_dl_2 = torch.utils.data.DataLoader(train_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
     val_dl_1 = torch.utils.data.DataLoader(val_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
     val_dl_2 = torch.utils.data.DataLoader(val_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
-    test_dl_1 = torch.utils.data.DataLoader(test_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
-    test_dl_2 = torch.utils.data.DataLoader(test_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
+    test_dl = torch.utils.data.DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
 
     # Plot few samples
     plot_random_samples(train_dl_1)
@@ -105,8 +101,7 @@ def prepare_data():
     torch.save(train_dl_2, dataloader_dir + 'Train_dl_2.pt')
     torch.save(val_dl_1, dataloader_dir + 'Validation_dl_1.pt')
     torch.save(val_dl_2, dataloader_dir + 'Validation_dl_2.pt')
-    torch.save(test_dl_1, dataloader_dir + 'Test_dl_1.pt')
-    torch.save(test_dl_2, dataloader_dir + 'Test_dl_2.pt')
+    torch.save(test_dl, dataloader_dir + 'Test_dl.pt')
 
 
 if __name__ == '__main__':

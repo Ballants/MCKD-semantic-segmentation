@@ -44,43 +44,38 @@ def prepare_data():
                                          transforms.CenterCrop(224),
                                          transforms.ToTensor()])
 
-    # transforms (callable, optional) – A function/transform that takes input sample and its target as entry and returns a transformed version.
-    # TODO fun fact: nella versione "test2017" (41k imgs, 6GB) non ci sono le annotazioni
-    coco_dataset = torchvision.datasets.CocoDetection(root="../coco_dataset/test2017",
-                                                      annFile="../coco_dataset/annotations/image_info_test2017.json",
-                                                      transform=data_transform)  # Todo check if "transforms" works on target data (check resulting images)
+    # Coco dataset version: "test2017" (41k imgs, 6GB). Annotation file does NOT contain labels.
+    coco_dataset = torchvision.datasets.CocoDetection(root="../datasets/coco_dataset/test2017",
+                                                      annFile="../datasets/coco_dataset/annotations/image_info_test2017.json",
+                                                      transform=data_transform)
 
     print('\nLen dataset: ', len(coco_dataset))  # 40670
 
     ds, _ = train_test_split(coco_dataset, train_size=PERC_DATA, shuffle=True, random_state=42)
 
     train_ds, val_test_ds = train_test_split(ds, train_size=0.7, shuffle=True, random_state=42)
-    print('Len Training dataset: ', len(train_ds))  # 28469     #
+    print('Len Training dataset: ', len(train_ds))  # 100%: 28469
     val_ds, test_ds = train_test_split(val_test_ds, test_size=1 / 3, shuffle=True, random_state=42)
-    print('Len Validation dataset: ', len(val_ds))  # 8134     #
-    print('Len Testing dataset: ', len(test_ds))  # 4067     #
+    print('Len Validation dataset: ', len(val_ds))  # 100%: 8134
+    print('Len Testing dataset: ', len(test_ds))  # 100%: 4067
 
     train_ds_1, train_ds_2 = train_test_split(train_ds, train_size=0.5, shuffle=True, random_state=42)
     val_ds_1, val_ds_2 = train_test_split(val_ds, train_size=0.5, shuffle=True, random_state=42)
-    test_ds_1, test_ds_2 = train_test_split(test_ds, train_size=0.5, shuffle=True, random_state=42)
-    print('Len Training dataset_1: ', len(train_ds_1))  # 14234     #
-    print('Len Training dataset_2: ', len(train_ds_2))  # 14235     #
-    print('Len Validation dataset_1: ', len(val_ds_1))  # 4067     #
-    print('Len Validation dataset_2: ', len(val_ds_2))  # 4067     #
-    print('Len Testing dataset_1: ', len(test_ds_1))  # 2033     #
-    print('Len Testing dataset_2: ', len(test_ds_2))  # 2034     #
+    print('Len Training dataset_1: ', len(train_ds_1))  # 100%: 14234
+    print('Len Training dataset_2: ', len(train_ds_2))  # 100%: 14235
+    print('Len Validation dataset_1: ', len(val_ds_1))  # 100%: 4067
+    print('Len Validation dataset_2: ', len(val_ds_2))  # 100%: 4067
 
     train_dl_1 = torch.utils.data.DataLoader(train_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
     train_dl_2 = torch.utils.data.DataLoader(train_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
     val_dl_1 = torch.utils.data.DataLoader(val_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
     val_dl_2 = torch.utils.data.DataLoader(val_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
-    test_dl_1 = torch.utils.data.DataLoader(test_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
-    test_dl_2 = torch.utils.data.DataLoader(test_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
+    test_dl = torch.utils.data.DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
 
     # Plot few samples
     plot_random_samples(train_dl_1)
 
-    dataloader_dir = "../data_loaders/"
+    dataloader_dir = "../data_loaders/coco/"
     if not os.path.exists(dataloader_dir):
         os.makedirs(dataloader_dir)
 
@@ -89,8 +84,7 @@ def prepare_data():
     torch.save(train_dl_2, dataloader_dir + 'Train_dl_2.pt')
     torch.save(val_dl_1, dataloader_dir + 'Validation_dl_1.pt')
     torch.save(val_dl_2, dataloader_dir + 'Validation_dl_2.pt')
-    torch.save(test_dl_1, dataloader_dir + 'Test_dl_1.pt')
-    torch.save(test_dl_2, dataloader_dir + 'Test_dl_2.pt')
+    torch.save(test_dl, dataloader_dir + 'Test_dl.pt')
 
 
 if __name__ == '__main__':
