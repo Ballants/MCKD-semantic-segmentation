@@ -1,21 +1,23 @@
 import torch.nn as nn
-from transformers import OneFormerForUniversalSegmentation, MaskFormerForInstanceSegmentation, Mask2FormerForUniversalSegmentation
+from transformers import MaskFormerForInstanceSegmentation, Mask2FormerForUniversalSegmentation
 
 from model.decoder import DeepLabHeadV3Plus
 
 
 class SwinDeepLabV3Plus(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, dataset):
         super(SwinDeepLabV3Plus, self).__init__()
 
         # Swin Transformer as backbone - (pre-trained backbone)
-        # oneformer_swin_t = OneFormerForUniversalSegmentation.from_pretrained("shi-labs/oneformer_ade20k_swin_tiny")
-        # mf_swin_t = MaskFormerForInstanceSegmentation.from_pretrained("facebook/maskformer-swin-tiny-coco")
-        mf_swin_t = Mask2FormerForUniversalSegmentation.from_pretrained("facebook/mask2former-swin-tiny-cityscapes-semantic")
+        match dataset:
+            case "coco":
+                mf_swin_t = MaskFormerForInstanceSegmentation.from_pretrained("facebook/maskformer-swin-tiny-coco")
+            case "cityscapes":
+                mf_swin_t = Mask2FormerForUniversalSegmentation.from_pretrained("facebook/mask2former-swin-tiny-cityscapes-semantic")
         self.backbone = mf_swin_t.model.pixel_level_module.encoder
 
         # DeepLabv3+ as classifier
-        self.classifier = DeepLabHeadV3Plus(num_classes=19)
+        self.classifier = DeepLabHeadV3Plus(num_classes=num_classes)
 
     def forward(self, x):
         # Forward pass through Swin Transformer

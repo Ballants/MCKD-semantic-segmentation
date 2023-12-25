@@ -78,10 +78,12 @@ def prepare_data():
 
     train_ds_1, train_ds_2 = train_test_split(train_ds, train_size=0.5, shuffle=True, random_state=42)
     val_ds_1, val_ds_2 = train_test_split(val_ds, train_size=0.5, shuffle=True, random_state=42)
+    test_ds, _ = train_test_split(test_ds, train_size=0.5, shuffle=True, random_state=42)
     print('Len Training dataset_1: ', len(train_ds_1))  # 1487
     print('Len Training dataset_2: ', len(train_ds_2))  # 1488
     print('Len Validation dataset_1: ', len(val_ds_1))  # 250
     print('Len Validation dataset_2: ', len(val_ds_2))  # 250
+    print('Len Test dataset: ', len(test_ds))
 
     train_dl_1 = torch.utils.data.DataLoader(train_ds_1, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)
     train_dl_2 = torch.utils.data.DataLoader(train_ds_2, batch_size=BATCH_SIZE, shuffle=True, num_workers=1)

@@ -4,11 +4,15 @@ import numpy as np
 import torch
 from matplotlib import cm
 
-from utils.constants import id2label_cityscapes
+from utils.constants import id2label_cityscapes, id2label_coco
 
 
-def visualize_segmentation(segmentation_tensor, path_to_save=None):
-    id2label = id2label_cityscapes  # todo change
+def visualize_segmentation(segmentation_tensor, dataset, path_to_save=None):
+    match dataset:
+        case "coco":
+            id2label = id2label_coco
+        case "cityscapes":
+            id2label = id2label_cityscapes
 
     # get all the unique numbers
     labels_ids = torch.unique(segmentation_tensor).tolist()
@@ -33,12 +37,8 @@ def visualize_segmentation(segmentation_tensor, path_to_save=None):
     plt.axis('off')
     plt.title('Segmentation Map')
 
-    # Adjust layout to prevent overlapping
-    # plt.tight_layout()
-
     handles = [mpatches.Patch(color=coco_color_map[label_id], label=id2label[label_id]) for label_id in labels_ids]
 
-    # Create legend with class labels
     plt.legend(handles=handles, labels=legend_labels, loc='upper left', bbox_to_anchor=(1, 1))
     plt.tight_layout()
 

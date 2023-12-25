@@ -104,15 +104,17 @@ if __name__ == '__main__':
     if not os.path.exists(d):
         os.makedirs(d)
 
-    '''check_imbalance(dl_path="../data_loaders/coco/Train_dl_1.pt", 
-                       json_path="../info_coco/num_imgs_x_class_stud1.json")'''
+    check_imbalance(dl_path="../data_loaders/coco/Train_dl_1.pt",
+                    json_path="../info_coco/num_imgs_x_class_stud1.json")
     plot_histogram(json_path="../info_coco/num_imgs_x_class_stud1.json",
                    hist_path="../info_coco/num_imgs_x_class_stud1_hist.png")
 
-    '''check_imbalance(dl_path="../data_loaders/coco/Train_dl_2.pt", json_path="../info_coco/num_imgs_x_class_stud2.json")'''
+    check_imbalance(dl_path="../data_loaders/coco/Train_dl_2.pt",
+                    json_path="../info_coco/num_imgs_x_class_stud2.json")
     plot_histogram(json_path="../info_coco/num_imgs_x_class_stud2.json",
                    hist_path="../info_coco/num_imgs_x_class_stud2_hist.png")
 
-    # check_imbalance(dl_path="../data_loaders/coco/Train_dl.pt", json_path="../info_coco/num_imgs_x_class.json")
+    check_imbalance(dl_path="../data_loaders/coco/Train_dl.pt",
+                    json_path="../info_coco/num_imgs_x_class.json")
     plot_histogram(json_path="../info_coco/num_imgs_x_class.json",
                    hist_path="../info_coco/num_imgs_x_class_hist.png")
