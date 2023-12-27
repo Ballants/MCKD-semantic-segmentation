@@ -16,7 +16,7 @@ def visualize_segmentation(segmentation_tensor, dataset, path_to_save=None):
 
     # get all the unique numbers
     labels_ids = torch.unique(segmentation_tensor).tolist()
-    print(labels_ids)
+    # print("Predicted labels: ", labels_ids)
 
     # Map ids with RGB colors
     coco_color_map = {id: cm.viridis(index / len(labels_ids)) for index, id in enumerate(labels_ids)}
