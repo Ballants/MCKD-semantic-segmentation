@@ -2,6 +2,7 @@ import copy
 import os
 import time
 import warnings
+import logging
 
 import matplotlib.pyplot as plt
 import torch
@@ -65,9 +66,9 @@ def final_train(dataset):
 
     # Weights sum up to 1
     # todo
-    kl_loss_weight = 0.0
-    ce_loss_weight = 0.0
-    dice_loss_weight = 0.0
+    kl_loss_weight = 0.1
+    ce_loss_weight = 0.7
+    dice_loss_weight = 0.2
     T = 10  # temperature
 
     match dataset:
@@ -242,8 +243,8 @@ def final_train(dataset):
             plt.plot(range(epoch + 1), single_losses['kl_l_val'], label='Val KL Loss', marker='o')
             plt.plot(range(epoch + 1), single_losses['dice_l_train'], label='Train Dice Loss', marker='o')
             plt.plot(range(epoch + 1), single_losses['dice_l_val'], label='Val Dice Loss', marker='o')
-            plt.plot(range(epoch + 1), single_losses['ce_l_train'], label='Train Focal Loss', marker='o')
-            plt.plot(range(epoch + 1), single_losses['ce_l_val'], label='Val Focal Loss', marker='o')
+            plt.plot(range(epoch + 1), single_losses['ce_l_train'], label='Train CE Loss', marker='o')
+            plt.plot(range(epoch + 1), single_losses['ce_l_val'], label='Val CE Loss', marker='o')
             plt.xlabel('Epochs')
             plt.ylabel('Loss')
             plt.title('Training and Validation Losses')
@@ -356,6 +357,10 @@ def test(dataset):
 
 
 if __name__ == '__main__':
+    # only log errors
+    logger = logging.getLogger()
+    logger.setLevel(logging.ERROR)
+    
     for dataset in ["coco", "cityscapes"]:
         # Final student
         print(f'### Starting training the final student on {dataset} dataset... ###')
