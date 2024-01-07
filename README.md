@@ -1,12 +1,10 @@
 # Multistage Collaborative Knowledge Distillation on Semantic Segmentation
 
-Final project for the **Advanced Machine Learning** course held by prof. Fabio Galasso at **Università Spienza di Roma** in A.Y. 2023/2024.
+Final project for the **Advanced Machine Learning** course held by prof. Fabio Galasso at **La Sapienza University of Rome** in A.Y. 2023/2024.
 
 ## Introduction
 
-Semantic segmentation is a widely studied task in the field of computer vision. However, in many applications, a frequent obstacle is the lack of 
-labeled images, because acquiring dense an notations of images is labor-intensive and time-consuming. In this project, we will investigate a novel
-distillation approach recently proposed, Multistage Collaborative Knowledge Distillation (MCKD) (Zhao et al., 2023) [[1]](https://arxiv.org/abs/2311.08640), for semi-supervised sequence prediction. Inspired by the results obtained in the original paper, we propose to study the effectiveness of this technique on image semantic segmentation.
+Semantic segmentation is a widely studied task in the field of computer vision. However, in many applications, a frequent obstacle is the lack of labeled images, because acquiring dense annotations of images is labor-intensive and time-consuming. In this project, we will investigate a novel distillation approach recently proposed, Multistage Collaborative Knowledge Distillation (MCKD) [[1]](https://arxiv.org/abs/2311.08640), for semi-supervised sequence prediction. Inspired by the results obtained in the original paper, we propose to study the effectiveness of this technique on image semantic segmentation.
 
 ![](images/mckd-paper-arch.jpg)
 
@@ -24,7 +22,7 @@ We evaluate our approach on two public semantic segmentation benchmark datasets:
 
 ### Training
 
-After collecting pseudo-labels for a large amount of unlabeled data from a teacher, the MCKD method consists of performing multiple stages of vanilla KD. In the first one, a pair of students are trained on distinct partitions of pseudo-labeled data and produce new pseudolabels for the data that they have not been trained on. In the final distillation stage, a single student is trained on all the latest pseudo-labeled data.
+After collecting pseudo-labels for a large amount of unlabeled data from a teacher, the MCKD method consists of performing multiple stages of vanilla KD. In the first one, a pair of students are trained on distinct partitions of pseudo-labeled data and produce new pseudo-labels for the data that they have not been trained on. In the final distillation stage, a single student is trained on all the latest pseudo-labeled data.
 
 [First stage](training/first_stage.py)
 
