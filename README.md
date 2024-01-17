@@ -11,7 +11,7 @@ Semantic segmentation is a widely studied task in the field of computer vision. 
 <i>Image from the original paper</i>
 
 ## Report
-<i>Coming soon</i>
+[Report](MCKD_on_semantic_segmentation.pdf)
 
 ## Getting Started
 
